@@ -1,0 +1,985 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SL-814 dB Meter</title>
+  <style>
+    :root {
+      --bg0: #f7f9ff;
+      --bg1: #ffffff;
+      --ink: #0b1220;
+      --muted: #586173;
+      --stroke: #e6e9f2;
+      --stroke2: #d9e0ee;
+      --accent: #2563eb;
+      --accent2: #7c3aed;
+      --shadow: 0 18px 50px rgba(11,18,32,0.10);
+      --shadow2: 0 10px 24px rgba(11,18,32,0.10);
+      --radius: 18px;
+      --dis-bg: #f1f3f8;
+      --dis-fg: #9aa3b2;
+      --dis-stroke: #e5e7ef;
+      --card-bg: rgba(255,255,255,0.78);
+      --meter-green: #22c55e;
+      --meter-yellow: #eab308;
+      --meter-red: #ef4444;
+    }
+
+    .dark {
+      --bg0: #0b0f14;
+      --bg1: #111826;
+      --ink: #e8eef6;
+      --muted: #9aa3b2;
+      --stroke: #1f2a3a;
+      --stroke2: #2a3548;
+      --accent: #f97316;
+      --accent2: #fb923c;
+      --shadow: 0 18px 50px rgba(0,0,0,0.25);
+      --shadow2: 0 10px 24px rgba(0,0,0,0.20);
+      --dis-bg: #1a202c;
+      --dis-fg: #586173;
+      --dis-stroke: #2a3548;
+      --card-bg: rgba(17,24,38,0.85);
+      --meter-green: #22c55e;
+      --meter-yellow: #f59e0b;
+      --meter-red: #ef4444;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+
+    body {
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: var(--bg1);
+      transition: background 200ms ease, color 200ms ease;
+    }
+
+    body:not(.dark) {
+      background:
+        radial-gradient(1100px 650px at 15% 10%, rgba(37,99,235,0.14), transparent 60%),
+        radial-gradient(900px 560px at 88% 22%, rgba(124,58,237,0.12), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+
+    body.dark {
+      background:
+        radial-gradient(1100px 650px at 15% 10%, rgba(249,115,22,0.12), transparent 60%),
+        radial-gradient(900px 560px at 88% 22%, rgba(251,146,60,0.08), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+
+    .page {
+      height: 100%;
+      display: grid;
+      grid-template-columns: auto 1fr;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 340px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 220ms ease, opacity 220ms ease, width 220ms ease, padding 220ms ease;
+    }
+
+    .controlsHidden .sidebar {
+      transform: translateX(-100%);
+      opacity: 0;
+      width: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .controlsCard {
+      background: var(--card-bg);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow2);
+      padding: 16px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .controlsCard h4 {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    select, button {
+      border: 1px solid var(--stroke2);
+      background: var(--bg1);
+      color: var(--ink);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 14px;
+      outline: none;
+      width: 100%;
+      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 180ms ease, color 180ms ease;
+    }
+
+    select { box-shadow: 0 10px 24px rgba(11,18,32,0.06); }
+    select:focus {
+      border-color: rgba(37,99,235,0.55);
+      box-shadow: 0 0 0 6px rgba(37,99,235,0.12);
+    }
+    .dark select:focus {
+      border-color: rgba(249,115,22,0.55);
+      box-shadow: 0 0 0 6px rgba(249,115,22,0.15);
+    }
+
+    button {
+      cursor: pointer;
+      user-select: none;
+      box-shadow: 0 10px 24px rgba(11,18,32,0.08);
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--bg1);
+    }
+
+    button:hover {
+      transform: scale(1.02);
+      box-shadow: 0 14px 30px rgba(11,18,32,0.12);
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      border-color: transparent;
+    }
+
+    button:active {
+      transform: scale(1.0);
+      box-shadow: 0 10px 24px rgba(11,18,32,0.10);
+    }
+
+    button:disabled {
+      background: var(--dis-bg) !important;
+      color: var(--dis-fg) !important;
+      border-color: var(--dis-stroke) !important;
+      box-shadow: none !important;
+      transform: none !important;
+      cursor: not-allowed !important;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .row label {
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+      min-width: 140px;
+    }
+
+    .row select,
+    .row input[type="range"] {
+      flex: 1;
+    }
+
+    .row select {
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    /* FIXED BUTTONS - always top right */
+    .fixedBtns {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .fixedBtns button {
+      width: auto;
+      padding: 10px 16px;
+      font-size: 13px;
+    }
+
+    /* MAIN AREA */
+    .main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .meterWrap {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    /* PEAK DISPLAY */
+    .peakDisplay {
+      text-align: center;
+    }
+
+    .peakLabel {
+      font-size: clamp(16px, 2vw, 22px);
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .peakValue {
+      font-weight: 900;
+      font-size: calc(clamp(96px, 16vw, 200px) * var(--text-scale, 1));
+      line-height: 1;
+      background: linear-gradient(180deg, var(--ink), var(--muted));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    /* BAR WRAPPER for scaling */
+    .barWrap {
+      width: 100%;
+      transform-origin: center top;
+    }
+
+    /* VU METER */
+    .vuMeter {
+      width: 100%;
+      height: clamp(40px, 5vw, 56px);
+      background: var(--bg1);
+      border-radius: 999px;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .vuTrack {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg,
+        var(--meter-green) 0%,
+        var(--meter-green) 55%,
+        var(--meter-yellow) 55%,
+        var(--meter-yellow) 78%,
+        var(--meter-red) 78%,
+        var(--meter-red) 100%
+      );
+      opacity: 0.2;
+    }
+
+    .vuFill {
+      position: absolute;
+      inset: 0;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg,
+        var(--meter-green) 0%,
+        var(--meter-green) 55%,
+        var(--meter-yellow) 55%,
+        var(--meter-yellow) 78%,
+        var(--meter-red) 78%,
+        var(--meter-red) 100%
+      );
+      background-size: calc(100% * 100 / var(--pct, 1)) 100%;
+    }
+
+    .vuPeak {
+      position: absolute;
+      top: 4px;
+      bottom: 4px;
+      width: 3px;
+      background: var(--ink);
+      border-radius: 2px;
+      left: 0;
+      transition: left 80ms linear;
+      box-shadow: 0 0 6px rgba(0,0,0,0.25);
+    }
+
+    .vuScale {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 8px;
+      margin-top: 4px;
+      user-select: none;
+    }
+
+    .vuScale .tick {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 0;
+    }
+
+    .vuScale .tick::before {
+      content: '';
+      width: 2px;
+      height: 12px;
+      background: var(--muted);
+      border-radius: 1px;
+      margin-bottom: 4px;
+    }
+
+    .vuScale .tick span {
+      font-size: clamp(10px, 1.2vw, 14px);
+      font-weight: 600;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* STATUS */
+    .status {
+      display: flex;
+      gap: 16px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .statusItem {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .statusDot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--dis-fg);
+    }
+
+    .statusDot.connected {
+      background: var(--meter-green);
+      box-shadow: 0 0 8px var(--meter-green);
+    }
+
+    /* SLIDERS */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: var(--muted);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+      .sidebar {
+        width: 100%;
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      .controlsCard {
+        flex: 1;
+        min-width: 200px;
+      }
+      .controlsHidden .sidebar {
+        transform: translateY(-100%);
+        height: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page" id="page">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="controlsCard">
+        <h4 id="connectionTitle">Connection</h4>
+        <div class="row">
+          <label id="statusLabel">Status:</label>
+          <span class="statusItem">
+            <span class="statusDot" id="statusDot"></span>
+            <span id="statusText">Disconnected</span>
+          </span>
+        </div>
+        <div class="row">
+          <label id="modeLabel">Mode:</label>
+          <span id="modeDisplay">—</span>
+        </div>
+        <button id="connectBtn">Choose device & start</button>
+      </div>
+
+      <div class="controlsCard">
+        <h4 id="settingsTitle">Settings</h4>
+        <div class="row">
+          <label id="langLabel">Language:</label>
+          <select id="langSelect">
+            <option value="en">English</option>
+            <option value="sk">Slovenčina</option>
+          </select>
+        </div>
+        <div class="row">
+          <label id="themeLabel">Theme:</label>
+          <select id="themeSelect">
+            <option value="light">☀️ Light</option>
+            <option value="dark">🌙 Dark</option>
+          </select>
+        </div>
+        <div class="row">
+          <label id="level40Label">Level 40 range</label>
+          <select id="level40Select">
+            <option value="130">40–130</option>
+            <option value="70">40–70</option>
+          </select>
+        </div>
+        <div class="row">
+          <label id="textSizeLabel">Text size</label>
+          <input type="range" id="textSizeSlider" min="0.7" max="1.8" step="0.1" value="1">
+        </div>
+        <div class="row">
+          <label id="barSizeLabel">Bar size</label>
+          <input type="range" id="barSizeSlider" min="0.7" max="1.8" step="0.1" value="1">
+        </div>
+      </div>
+    </div>
+
+    <!-- FIXED BUTTONS - always visible -->
+    <div class="fixedBtns" id="fixedBtns">
+      <button id="toggleBtn">Hide Panel</button>
+      <button id="resetMaxBtn">Reset Peak</button>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="meterWrap">
+        <div class="peakDisplay">
+          <div class="peakLabel" id="peakLabel">Peak</div>
+          <div class="peakValue" id="peakValue">— dB</div>
+        </div>
+
+        <div class="barWrap" id="barWrap">
+          <div class="vuMeter">
+            <div class="vuTrack"></div>
+            <div class="vuFill" id="vuFill"></div>
+            <div class="vuPeak" id="vuPeak"></div>
+          </div>
+
+          <div class="vuScale" id="vuScale">
+            <div class="tick"><span>40</span></div>
+            <div class="tick"><span>50</span></div>
+            <div class="tick"><span>60</span></div>
+            <div class="tick"><span>70</span></div>
+            <div class="tick"><span>80</span></div>
+            <div class="tick"><span>90</span></div>
+            <div class="tick"><span>100</span></div>
+            <div class="tick"><span>110</span></div>
+            <div class="tick"><span>120</span></div>
+            <div class="tick"><span>130</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+
+  const pageEl = $('page');
+  const toggleBtn = $('toggleBtn');
+  const resetMaxBtn = $('resetMaxBtn');
+  const connectBtn = $('connectBtn');
+  const langSelect = $('langSelect');
+  const themeSelect = $('themeSelect');
+  const level40Select = $('level40Select');
+  const peakValueEl = $('peakValue');
+  const vuFillEl = $('vuFill');
+  const vuPeakEl = $('vuPeak');
+  const vuScaleEl = $('vuScale');
+  const barWrap = $('barWrap');
+  const statusDot = $('statusDot');
+  const statusText = $('statusText');
+  const modeDisplay = $('modeDisplay');
+  const modeLabel = $('modeLabel');
+  const statusLabel = $('statusLabel');
+  const peakLabel = $('peakLabel');
+  const connectionTitle = $('connectionTitle');
+  const settingsTitle = $('settingsTitle');
+  const langLabel = $('langLabel');
+  const themeLabel = $('themeLabel');
+  const level40Label = $('level40Label');
+  const textSizeSlider = $('textSizeSlider');
+  const barSizeSlider = $('barSizeSlider');
+  const textSizeLabel = $('textSizeLabel');
+  const barSizeLabel = $('barSizeLabel');
+  const meterWrap = document.querySelector('.meterWrap');
+
+  // Dynamic range (will be updated based on level from device)
+  let MIN_DB = 40;
+  let MAX_DB = 130;
+  let currentLevel = 40;
+
+  function updateRange(level) {
+    if (level === currentLevel) return;
+    currentLevel = level;
+
+    // Determine new range based on level
+    if (level === 40) {
+      MIN_DB = 40;
+      MAX_DB = level40Select.value === '70' ? 70 : 130;
+    } else if (level === 60) {
+      MIN_DB = 60;
+      MAX_DB = 90;
+    } else if (level === 80) {
+      MIN_DB = 80;
+      MAX_DB = 110;
+    } else if (level === 100) {
+      MIN_DB = 100;
+      MAX_DB = 130;
+    }
+
+    // Regenerate scale ticks - 5dB steps for 30dB range, 10dB steps for 90dB range
+    vuScaleEl.innerHTML = '';
+    const range = MAX_DB - MIN_DB;
+    const step = range > 50 ? 10 : 5; // 10dB for 40-130, 5dB for 30dB ranges
+    const tickCount = range / step;
+    
+    for (let i = 0; i <= tickCount; i++) {
+      const tick = document.createElement('div');
+      tick.className = 'tick';
+      const span = document.createElement('span');
+      span.textContent = MIN_DB + i * step;
+      tick.appendChild(span);
+      vuScaleEl.appendChild(tick);
+    }
+
+    // Update peak indicator position if we have a peak
+    if (maxDb !== null) {
+      const peakPct = Math.max(0, Math.min(100, ((maxDb - MIN_DB) / (MAX_DB - MIN_DB)) * 100));
+      vuPeakEl.style.left = peakPct + '%';
+    }
+
+    // Update current bar position
+    updateBar(currentDb);
+  }
+
+  let port = null;
+  let reader = null;
+  let keepRunning = false;
+  let maxDb = null;
+
+  // i18n
+  const i18n = {
+    en: {
+      connection: 'Connection',
+      settings: 'Settings',
+      language: 'Language',
+      theme: 'Theme',
+      themeLight: '☀️ Light',
+      themeDark: '🌙 Dark',
+      level40Range: 'Level 40 range',
+      textSize: 'Text size',
+      barSize: 'Bar size',
+      information: 'Information',
+      status: 'Status',
+      mode: 'Mode',
+      connect: 'Choose device & start',
+      disconnect: 'Disconnect',
+      peak: 'Peak',
+      resetPeak: 'Reset Peak',
+      hide: 'Hide Panel',
+      show: 'Show Panel',
+      hint: 'Use Chrome or Edge. Click Connect and select your COM port, then data will stream automatically.',
+      selectPort: 'Click Connect to select port…',
+      connected: 'Connected',
+      disconnected: 'Disconnected',
+      polling: 'Polling…'
+    },
+    sk: {
+      connection: 'Pripojenie',
+      settings: 'Nastavenia',
+      language: 'Jazyk',
+      theme: 'Téma',
+      themeLight: '☀️ Svetlý',
+      themeDark: '🌙 Tmavý',
+      level40Range: 'Rozsah úrovne 40',
+      textSize: 'Veľkosť textu',
+      barSize: 'Veľkosť ukazovateľa',
+      information: 'Informácie',
+      status: 'Stav',
+      mode: 'Režim',
+      connect: 'Vybrať zariadenie a spustiť',
+      disconnect: 'Odpojiť',
+      peak: 'Maximum',
+      resetPeak: 'Resetovať maximum',
+      hide: 'Skryť panel',
+      show: 'Zobraziť panel',
+      hint: 'Použite Chrome alebo Edge. Kliknite Pripojiť a vyberte COM port, dáta sa začnú streamovať automaticky.',
+      selectPort: 'Kliknite Pripojiť pre výber portu…',
+      connected: 'Pripojené',
+      disconnected: 'Odpojené',
+      polling: 'Načítavam…'
+    }
+  };
+
+  let currentLang = 'en';
+
+  function t(key) {
+    return i18n[currentLang][key] || i18n['en'][key] || key;
+  }
+
+  function updateUI() {
+    connectionTitle.textContent = t('connection');
+    settingsTitle.textContent = t('settings');
+    langLabel.textContent = t('language');
+    themeLabel.textContent = t('theme');
+    statusLabel.textContent = t('status') + ':';
+    modeLabel.textContent = t('mode') + ':';
+    // Update theme dropdown options
+    themeSelect.options[0].textContent = t('themeLight');
+    themeSelect.options[1].textContent = t('themeDark');
+    level40Label.textContent = t('level40Range');
+    textSizeLabel.textContent = t('textSize');
+    barSizeLabel.textContent = t('barSize');
+    connectBtn.textContent = port ? t('disconnect') : t('connect');
+    peakLabel.textContent = t('peak');
+    resetMaxBtn.textContent = t('resetPeak');
+    toggleBtn.textContent = pageEl.classList.contains('controlsHidden') ? t('show') : t('hide');
+    statusText.textContent = port ? t('connected') : t('disconnected');
+  }
+
+  langSelect.addEventListener('change', () => {
+    currentLang = langSelect.value;
+    updateUI();
+  });
+
+  themeSelect.addEventListener('change', () => {
+    document.body.classList.toggle('dark', themeSelect.value === 'dark');
+  });
+
+  level40Select.addEventListener('change', () => {
+    // If we're currently at level 40, update the range immediately
+    if (currentLevel === 40) {
+      currentLevel = -1; // Force update
+      updateRange(40);
+    }
+  });
+
+  textSizeSlider.addEventListener('input', () => {
+    meterWrap.style.setProperty('--text-scale', textSizeSlider.value);
+  });
+
+  barSizeSlider.addEventListener('input', () => {
+    barWrap.style.transform = `scale(${barSizeSlider.value})`;
+  });
+
+  toggleBtn.addEventListener('click', () => {
+    pageEl.classList.toggle('controlsHidden');
+    toggleBtn.textContent = pageEl.classList.contains('controlsHidden') ? t('show') : t('hide');
+  });
+
+  resetMaxBtn.addEventListener('click', () => {
+    stopAnimation();
+    maxDb = null;
+    currentDb = MIN_DB;
+    targetDb = MIN_DB;
+    peakValueEl.textContent = '— dB';
+    vuPeakEl.style.left = '0';
+    updateBar(MIN_DB);
+  });
+
+  // Serial
+  class ByteQueue {
+    constructor() { this.buf = new Uint8Array(0); }
+    push(chunk) {
+      const merged = new Uint8Array(this.buf.length + chunk.length);
+      merged.set(this.buf, 0);
+      merged.set(chunk, this.buf.length);
+      this.buf = merged;
+    }
+    take(n) {
+      if (this.buf.length < n) return null;
+      const out = this.buf.slice(0, n);
+      this.buf = this.buf.slice(n);
+      return out;
+    }
+    clear() { this.buf = new Uint8Array(0); }
+  }
+  const q = new ByteQueue();
+
+  function decodeResult(result4) {
+    const b0 = result4[0];
+    const b1 = result4[1];
+
+    const ac = (b0 & (1 << 7)) >> 7;
+    const sl = (b0 & (1 << 3)) >> 3;
+    
+    // Level from bits 4, 5, 6
+    const factor = (b0 & ((1 << 6) | (1 << 5) | (1 << 4))) >> 4;
+    const level = 40 + (factor * 20); // 40, 60, 80, or 100
+
+    const valInt = ((b0 & 0x7) << 8) | b1;
+    const tmpStr = String(valInt);
+    const valStr = tmpStr.length >= 2
+      ? tmpStr.slice(0, -1) + '.' + tmpStr.slice(-1)
+      : '0.' + tmpStr;
+
+    return {
+      ac: ac === 0 ? 'A' : 'C',
+      speed: sl === 0 ? 'Fast' : 'Slow',
+      level: level,
+      value: parseFloat(valStr)
+    };
+  }
+
+  // Animation config
+  const ANIMATION_FPS = 60;
+  const POLL_INTERVAL_MS = 300;
+  const STEP_DURATION = Math.round(1000 / ANIMATION_FPS); // ~16.67ms at 60fps
+  const STEPS_PER_POLL = Math.round(POLL_INTERVAL_MS / STEP_DURATION); // 18 steps at 60fps
+
+  // Smooth animation variables
+  let currentDb = MIN_DB;
+  let targetDb = MIN_DB;
+  let animationIntervalId = null;
+
+  function updateBar(db) {
+    const pct = Math.max(0, Math.min(100, ((db - MIN_DB) / (MAX_DB - MIN_DB)) * 100));
+    vuFillEl.style.width = pct + '%';
+    vuFillEl.style.setProperty('--pct', pct);
+  }
+
+  function animateToTarget(newTarget) {
+    // Stop any existing animation
+    if (animationIntervalId) {
+      clearInterval(animationIntervalId);
+    }
+
+    const startDb = currentDb;
+    targetDb = newTarget;
+    let step = 0;
+
+    // Interpolate over STEPS_PER_POLL updates
+    animationIntervalId = setInterval(() => {
+      step++;
+      if (step >= STEPS_PER_POLL) {
+        currentDb = targetDb;
+        updateBar(currentDb);
+        clearInterval(animationIntervalId);
+        animationIntervalId = null;
+      } else {
+        // Linear interpolation: start + (end - start) * (step / steps)
+        currentDb = startDb + (targetDb - startDb) * (step / STEPS_PER_POLL);
+        updateBar(currentDb);
+      }
+    }, STEP_DURATION);
+
+    // Update peak (instant, not interpolated)
+    if (maxDb === null || newTarget > maxDb) {
+      maxDb = newTarget;
+      peakValueEl.textContent = maxDb.toFixed(1) + ' dB';
+      const peakPct = Math.max(0, Math.min(100, ((maxDb - MIN_DB) / (MAX_DB - MIN_DB)) * 100));
+      vuPeakEl.style.left = `calc(${peakPct}% - 1.5px)`;
+    }
+  }
+
+  function stopAnimation() {
+    if (animationIntervalId) {
+      clearInterval(animationIntervalId);
+      animationIntervalId = null;
+    }
+  }
+
+  async function readLoop() {
+    reader = port.readable.getReader();
+    try {
+      while (keepRunning) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value && value.length) q.push(value);
+      }
+    } catch (e) {
+      console.error('Read error:', e);
+    } finally {
+      try { reader.releaseLock(); } catch {}
+    }
+  }
+
+  async function writeBytes(bytesArr) {
+    const writer = port.writable.getWriter();
+    try {
+      await writer.write(new Uint8Array(bytesArr));
+    } finally {
+      writer.releaseLock();
+    }
+  }
+
+  async function readExact(n, timeoutMs = 500) {
+    const t0 = performance.now();
+    while (performance.now() - t0 < timeoutMs) {
+      const got = q.take(n);
+      if (got) return got;
+      await new Promise(r => setTimeout(r, 5));
+    }
+    return null;
+  }
+
+  async function startPolling() {
+    keepRunning = true;
+    q.clear();
+    readLoop();
+
+    let failCount = 0;
+    const MAX_FAILS = 3; // 3 failures × 300ms + timeout = ~1s
+    let hasConnected = false;
+
+    while (keepRunning) {
+      await writeBytes([0x30, 0x01, 0x0d]);
+      const result = await readExact(4, 400);
+
+      if (result) {
+        // Show connected only after first successful read
+        if (!hasConnected) {
+          hasConnected = true;
+          statusDot.classList.add('connected');
+          statusText.textContent = t('connected');
+        }
+        failCount = 0; // Reset on successful read
+        const decoded = decodeResult(result);
+        
+        // Update range if level changed
+        updateRange(decoded.level);
+        
+        animateToTarget(decoded.value);
+        modeDisplay.textContent = `${decoded.ac} / ${decoded.speed}`;
+      } else {
+        failCount++;
+        if (failCount >= MAX_FAILS) {
+          console.log('Connection lost - no response for ~1s');
+          await closePort();
+          return;
+        }
+      }
+
+      // Wait 300ms, then the animation (also 300ms) will be complete
+      // and we get the next value
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    stopAnimation();
+
+    statusDot.classList.remove('connected');
+    statusText.textContent = t('disconnected');
+  }
+
+  async function openPort() {
+    if (!('serial' in navigator)) {
+      alert('Web Serial API not supported. Use Chrome or Edge.');
+      return;
+    }
+
+    port = await navigator.serial.requestPort();
+    await port.open({
+      baudRate: 9600,
+      dataBits: 8,
+      stopBits: 1,
+      parity: 'even',
+      flowControl: 'none'
+    });
+
+    connectBtn.textContent = t('disconnect');
+
+    startPolling();
+  }
+
+  async function closePort() {
+    keepRunning = false;
+    try {
+      if (reader) {
+        await reader.cancel();
+        reader.releaseLock();
+        reader = null;
+      }
+    } catch {}
+    try {
+      if (port) {
+        await port.close();
+        port = null;
+      }
+    } catch {}
+
+    connectBtn.textContent = t('connect');
+    statusDot.classList.remove('connected');
+    statusText.textContent = t('disconnected');
+    modeDisplay.textContent = '—';
+
+    // Reset peak and bar on disconnect
+    stopAnimation();
+    maxDb = null;
+    currentDb = MIN_DB;
+    targetDb = MIN_DB;
+    peakValueEl.textContent = '— dB';
+    vuPeakEl.style.left = '0';
+    updateBar(MIN_DB);
+  }
+
+  connectBtn.addEventListener('click', async () => {
+    try {
+      if (port) {
+        await closePort();
+      } else {
+        await openPort();
+      }
+    } catch (e) {
+      console.error('Connection error:', e);
+      await closePort();
+    }
+  });
+
+  window.addEventListener('beforeunload', () => {
+    keepRunning = false;
+    try { reader?.cancel(); } catch {}
+    try { port?.close(); } catch {}
+  });
+
+  updateUI();
+})();
+</script>
+</body>
+</html>
