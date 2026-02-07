@@ -1,6 +1,6 @@
 # SL-814 dB Meter
 
-A web-based interface for the **Tondaj SL-814 sound level meter**. Connects via USB-to-serial adapter and displays real-time decibel readings with a smooth animated VU meter visualization.
+A web-based interface for the **Tondaj SL-814 sound level meter**. Connects via USB-to-serial adapter and displays real-time decibel readings with a smooth animated VU meter visualization. Runs in Chrome or Edge only (uses Web Serial API).
 
 ## Features
 
@@ -33,7 +33,3 @@ The Prolific PL2303 adapter requires legacy drivers on Windows 11. See [driver/R
 
 Serial protocol reverse-engineered by the sigrok project:  
 https://sigrok.org/wiki/Tondaj_SL-814
-
-## License
-
-MIT
