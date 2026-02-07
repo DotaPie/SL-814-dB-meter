@@ -2,6 +2,8 @@
 
 A web-based interface for the **Tondaj SL-814 sound level meter**. Connects via USB-to-serial adapter and displays real-time decibel readings with a smooth animated VU meter visualization. Runs in Chrome or Edge only (uses Web Serial API).
 
+<img width="1316" height="668" alt="Screenshot 2026-02-07 230753" src="https://github.com/user-attachments/assets/db4303e2-5ee6-4750-aa80-1cf810395869" />
+
 ## Features
 
 - Real-time dB readings with 60fps animated bar
