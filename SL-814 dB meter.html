@@ -442,6 +442,10 @@
           <label id="modeLabel">Mode:</label>
           <span id="modeDisplay">—</span>
         </div>
+        <div class="row">
+          <label id="levelLabel">Level:</label>
+          <span id="levelDisplay">—</span>
+        </div>
         <button id="connectBtn">Choose device & start</button>
       </div>
 
@@ -462,13 +466,6 @@
           </select>
         </div>
         <div class="row">
-          <label id="level40Label">Level 40 range</label>
-          <select id="level40Select">
-            <option value="130">40–130</option>
-            <option value="70">40–70</option>
-          </select>
-        </div>
-        <div class="row">
           <label id="textSizeLabel">Text size</label>
           <input type="range" id="textSizeSlider" min="0.7" max="1.8" step="0.1" value="1">
         </div>
@@ -477,6 +474,8 @@
           <input type="range" id="barSizeSlider" min="0.7" max="1.8" step="0.1" value="1">
         </div>
       </div>
+
+      <p class="hint" id="fullscreenHint">Press F11 for fullscreen mode</p>
     </div>
 
     <!-- FIXED BUTTONS - always visible -->
@@ -527,7 +526,6 @@
   const connectBtn = $('connectBtn');
   const langSelect = $('langSelect');
   const themeSelect = $('themeSelect');
-  const level40Select = $('level40Select');
   const peakValueEl = $('peakValue');
   const vuFillEl = $('vuFill');
   const vuPeakEl = $('vuPeak');
@@ -537,67 +535,24 @@
   const statusText = $('statusText');
   const modeDisplay = $('modeDisplay');
   const modeLabel = $('modeLabel');
+  const levelLabel = $('levelLabel');
+  const levelDisplay = $('levelDisplay');
   const statusLabel = $('statusLabel');
   const peakLabel = $('peakLabel');
   const connectionTitle = $('connectionTitle');
   const settingsTitle = $('settingsTitle');
   const langLabel = $('langLabel');
   const themeLabel = $('themeLabel');
-  const level40Label = $('level40Label');
+  const fullscreenHint = $('fullscreenHint');
   const textSizeSlider = $('textSizeSlider');
   const barSizeSlider = $('barSizeSlider');
   const textSizeLabel = $('textSizeLabel');
   const barSizeLabel = $('barSizeLabel');
   const meterWrap = document.querySelector('.meterWrap');
 
-  // Dynamic range (will be updated based on level from device)
-  let MIN_DB = 40;
-  let MAX_DB = 130;
-  let currentLevel = 40;
-
-  function updateRange(level) {
-    if (level === currentLevel) return;
-    currentLevel = level;
-
-    // Determine new range based on level
-    if (level === 40) {
-      MIN_DB = 40;
-      MAX_DB = level40Select.value === '70' ? 70 : 130;
-    } else if (level === 60) {
-      MIN_DB = 60;
-      MAX_DB = 90;
-    } else if (level === 80) {
-      MIN_DB = 80;
-      MAX_DB = 110;
-    } else if (level === 100) {
-      MIN_DB = 100;
-      MAX_DB = 130;
-    }
-
-    // Regenerate scale ticks - 5dB steps for 30dB range, 10dB steps for 90dB range
-    vuScaleEl.innerHTML = '';
-    const range = MAX_DB - MIN_DB;
-    const step = range > 50 ? 10 : 5; // 10dB for 40-130, 5dB for 30dB ranges
-    const tickCount = range / step;
-    
-    for (let i = 0; i <= tickCount; i++) {
-      const tick = document.createElement('div');
-      tick.className = 'tick';
-      const span = document.createElement('span');
-      span.textContent = MIN_DB + i * step;
-      tick.appendChild(span);
-      vuScaleEl.appendChild(tick);
-    }
-
-    // Update peak indicator position if we have a peak
-    if (maxDb !== null) {
-      const peakPct = Math.max(0, Math.min(100, ((maxDb - MIN_DB) / (MAX_DB - MIN_DB)) * 100));
-      vuPeakEl.style.left = peakPct + '%';
-    }
-
-    // Update current bar position
-    updateBar(currentDb);
-  }
+  // Fixed range 40-130 dB
+  const MIN_DB = 40;
+  const MAX_DB = 130;
 
   let port = null;
   let reader = null;
@@ -613,9 +568,10 @@
       theme: 'Theme',
       themeLight: '☀️ Light',
       themeDark: '🌙 Dark',
-      level40Range: 'Level 40 range',
+      level: 'Level',
       textSize: 'Text size',
       barSize: 'Bar size',
+      fullscreenHint: 'Press F11 for fullscreen mode',
       information: 'Information',
       status: 'Status',
       mode: 'Mode',
@@ -638,9 +594,10 @@
       theme: 'Téma',
       themeLight: '☀️ Svetlý',
       themeDark: '🌙 Tmavý',
-      level40Range: 'Rozsah úrovne 40',
+      level: 'Úroveň',
       textSize: 'Veľkosť textu',
       barSize: 'Veľkosť ukazovateľa',
+      fullscreenHint: 'Stlačte F11 pre režim celej obrazovky',
       information: 'Informácie',
       status: 'Stav',
       mode: 'Režim',
@@ -674,7 +631,8 @@
     // Update theme dropdown options
     themeSelect.options[0].textContent = t('themeLight');
     themeSelect.options[1].textContent = t('themeDark');
-    level40Label.textContent = t('level40Range');
+    levelLabel.textContent = t('level') + ':';
+    fullscreenHint.textContent = t('fullscreenHint');
     textSizeLabel.textContent = t('textSize');
     barSizeLabel.textContent = t('barSize');
     connectBtn.textContent = port ? t('disconnect') : t('connect');
@@ -691,14 +649,6 @@
 
   themeSelect.addEventListener('change', () => {
     document.body.classList.toggle('dark', themeSelect.value === 'dark');
-  });
-
-  level40Select.addEventListener('change', () => {
-    // If we're currently at level 40, update the range immediately
-    if (currentLevel === 40) {
-      currentLevel = -1; // Force update
-      updateRange(40);
-    }
   });
 
   textSizeSlider.addEventListener('input', () => {
@@ -883,11 +833,13 @@
         failCount = 0; // Reset on successful read
         const decoded = decodeResult(result);
         
-        // Update range if level changed
-        updateRange(decoded.level);
+        // Log raw bytes and parsed values (like Python script)
+        const hex = Array.from(result).map(b => b.toString(16).padStart(2, '0')).join(' ');
+        console.log(`${hex}   -   ${decoded.ac}, ${decoded.speed}, Level: ${decoded.level}, ${decoded.value.toFixed(1)} dB`);
         
         animateToTarget(decoded.value);
         modeDisplay.textContent = `${decoded.ac} / ${decoded.speed}`;
+        levelDisplay.textContent = decoded.level;
       } else {
         failCount++;
         if (failCount >= MAX_FAILS) {
@@ -948,6 +900,7 @@
     statusDot.classList.remove('connected');
     statusText.textContent = t('disconnected');
     modeDisplay.textContent = '—';
+    levelDisplay.textContent = '—';
 
     // Reset peak and bar on disconnect
     stopAnimation();
