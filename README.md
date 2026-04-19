@@ -27,7 +27,7 @@ A web-based interface for the **Tondaj SL-814 sound level meter**. Connects via 
 The Prolific PL2303 adapter requires legacy drivers on Windows 11. See [driver/README.md](driver/README.md) for detailed instructions.
 
 **Quick steps:**
-1. Download drivers from [theAmberLion/Prolific](https://github.com/theAmberLion/Prolific)
+1. Download drivers from [theAmberLion/Prolific](https://github.com/theAmberLion/Prolific) or from this repo "[SL-814-dB-meter/driver](https://github.com/DotaPie/SL-814-dB-meter/tree/main/driver)"
 2. Install `PL2303_Prolific_v3.3.2.105.exe`
 3. In Device Manager, update the driver and select version 3.3.2.105
 
